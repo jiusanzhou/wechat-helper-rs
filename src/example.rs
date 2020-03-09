@@ -1,0 +1,37 @@
+// example just to notify we have injected success.
+
+extern crate winapi;
+
+use std::io::Error;
+use std::os::windows::ffi::OsStrExt;
+use std::ptr::null_mut;
+
+use winapi::um::winuser::{MessageBoxW, MB_ICONINFORMATION, MB_OK};
+
+// Get win32 lpstr from &str, converting u8 to u16 and appending '\0'
+// See retep998's traits for a more general solution: https://users.rust-lang.org/t/tidy-pattern-to-work-with-lpstr-mutable-char-array/2976/2
+fn to_wstring(value: &str) -> Vec<u16> {
+    std::ffi::OsStr::new(value)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect()
+}
+
+pub fn message_box_w(title: &str, msg: &str) -> Result<i32, Error>{
+    let lp_text = to_wstring(msg);
+    let lp_caption = to_wstring(title);
+    let ret = unsafe {
+        // https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-messageboxw
+        MessageBoxW(
+            null_mut(),          // hWnd
+            lp_text.as_ptr(),    // text
+            lp_caption.as_ptr(), // caption (dialog box title)
+            MB_OK | MB_ICONINFORMATION,
+        )
+    };
+    if ret == 0 {
+        Err(Error::last_os_error())
+    } else {
+        Ok(ret)
+    }
+}
